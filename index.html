@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/Gardeniatoday/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جاردينيا توداي</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { margin:0; padding:0; overflow:hidden; font-family:'Cairo',sans-serif; }
+    #splash {
+      position:fixed; top:0; left:0; width:100vw; height:100vh;
+      background:radial-gradient(circle at top left, #065F46, #047857, #F59E0B);
+      display:flex; justify-content:center; align-items:center;
+      z-index:9999; transition:opacity 0.5s ease-out; opacity:1; visibility:visible;
+    }
+    #splash.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+    #particles-container { position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden; }
+    .particle { position:absolute; background:rgba(255,255,255,0.15); border-radius:50%; pointer-events:none; animation:float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-20px); } }
+    .content { position:relative; z-index:10; text-align:center; padding:20px; max-width:90vw; }
+    .logo-wrapper { width:150px; height:150px; border-radius:50%; background:white; box-shadow:0 20px 40px rgba(0,0,0,0.3); overflow:hidden; margin:0 auto 30px; }
+    .logo-wrapper img { width:100%; height:100%; object-fit:cover; }
+    .app-name { font-size:42px; font-weight:900; margin:20px 0 8px; background:linear-gradient(135deg, #FEFCE8, #FFE5B4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .tagline { font-size:18px; color:rgba(255,255,255,0.9); margin-bottom:40px; }
+    .loader-ring { width:50px; height:50px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; margin:0 auto 16px; display:flex; align-items:center; justify-content:center; }
+    .loader-spinner { width:30px; height:30px; border:3px solid transparent; border-top-color:#F59E0B; border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+    .loader-text { font-size:14px; color:rgba(255,255,255,0.7); }
+    @media (min-width:600px) { .logo-wrapper { width:200px; height:200px; } .app-name { font-size:52px; } }
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <div id="particles-container"></div>
+  <div class="content">
+    <div class="logo-wrapper"><img src="icons/Icon-192.png" alt="Gardenia Today"></div>
+    <div class="app-name">جاردينيا توداي</div>
+    <div class="tagline">كل خدماتك في مكان واحد</div>
+    <div class="loader-ring"><div class="loader-spinner"></div></div>
+    <div class="loader-text" id="loadingText">جاري التحميل...</div>
+  </div>
+</div>
+
+<script>
+  const LOG_PREFIX = '📋 [HTML]';
+  function logEvent(event, details = '') {
+    const time = new Date().toLocaleTimeString('ar-EG', {
+      hour12: false, hour: '2-digit', minute: '2-digit',
+      second: '2-digit', fractionalSecondDigits: 3
+    });
+    console.log(`${LOG_PREFIX} ${time} - ${event} ${details}`);
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  ✅ تسجيل Firebase Messaging SW
+  //  لازم يتسجل قبل flutter_bootstrap.js
+  //  مع scope صريح لـ GitHub Pages
+  // ══════════════════════════════════════════════════════════════════
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('/Gardeniatoday/firebase-messaging-sw.js', {
+        scope: '/Gardeniatoday/'
+      })
+      .then(function(reg) {
+        logEvent('✅ Firebase SW مسجّل', reg.scope);
+      })
+      .catch(function(err) {
+        logEvent('❌ Firebase SW فشل:', err.message);
+      });
+  }
+
+  // ══════════════════════════════════════════════════════════════════
+  //  Particles & Splash
+  // ══════════════════════════════════════════════════════════════════
+  function createParticles() {
+    const container = document.getElementById('particles-container');
+    if (!container) return;
+    container.innerHTML = '';
+    for (let i = 0; i < 20; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = Math.random() * 40 + 10;
+      p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*2}s;animation-duration:${Math.random()*3+2}s`;
+      container.appendChild(p);
+    }
+  }
+
+  window.hideSplash = function() {
+    const splash = document.getElementById('splash');
+    if (!splash || splash.classList.contains('hidden')) return;
+    splash.classList.add('hidden');
+    setTimeout(() => { if (splash?.parentNode) splash.remove(); }, 500);
+    logEvent('✅ splash مخفي');
+  };
+
+  logEvent('🚀 بدء التشغيل');
+  createParticles();
+
+  window.addEventListener('message', (e) => {
+    if (e.data === 'hide-html-splash') window.hideSplash();
+  });
+
+  document.addEventListener('flutter-first-frame', () => {
+    logEvent('🎬 flutter-first-frame');
+    window.hideSplash();
+  });
+
+  // طوارئ: إخفاء بعد 15 ثانية
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if (splash && !splash.classList.contains('hidden')) {
+      logEvent('⚠️ إخفاء قسري بعد 15 ثانية');
+      window.hideSplash();
+    }
+  }, 15000);
+
+  logEvent('🎯 جاهز');
+</script>
+
+<!--
+  ✅ flutter_bootstrap.js يحتوي على _flutter.buildConfig و _flutter.loader.load()
+     لا نستدعيهم مرة أخرى هنا لتجنب التعارض
+-->
+<script src="flutter_bootstrap.js" async></script>
+
+</body>
+</html>
