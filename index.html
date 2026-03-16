@@ -1,0 +1,488 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/Gardeniatoday/">
+  <title>جاردينيا توداي</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { margin:0; padding:0; overflow:hidden; font-family:'Cairo',sans-serif; }
+    #splash { position:fixed; top:0; left:0; width:100vw; height:100vh; background:radial-gradient(circle at top left, #065F46, #047857, #F59E0B); display:flex; justify-content:center; align-items:center; z-index:9999; transition:opacity 0.3s ease-out; opacity:1; visibility:visible; }
+    #splash.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+    #particles-container { position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden; }
+    .particle { position:absolute; background:rgba(255,255,255,0.15); border-radius:50%; pointer-events:none; animation:float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-20px); } }
+    .content { position:relative; z-index:10; text-align:center; padding:20px; max-width:90vw; }
+    .logo-wrapper { width:120px; height:120px; border-radius:50%; background:white; box-shadow:0 20px 40px rgba(0,0,0,0.3); overflow:hidden; margin:0 auto 20px; }
+    .logo-wrapper img { width:100%; height:100%; object-fit:cover; }
+    .app-name { font-size:32px; font-weight:900; margin:15px 0 5px; background:linear-gradient(135deg, #FEFCE8, #FFE5B4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .tagline { font-size:16px; color:rgba(255,255,255,0.9); margin-bottom:30px; }
+    .loader-ring { width:40px; height:40px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; }
+    .loader-spinner { width:24px; height:24px; border:2px solid transparent; border-top-color:#F59E0B; border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+    .loader-text { font-size:13px; color:rgba(255,255,255,0.7); }
+    @media (min-width:600px) { .logo-wrapper { width:150px; height:150px; } .app-name { font-size:42px; } }
+  </style>
+
+  <script>
+    // ✅ تسجيل Service Worker أولاً قبل أي شيء
+    if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+    console.log('[SW] جاري تسجيل Service Worker...');
+
+    navigator.serviceWorker.register('/Gardeniatoday/firebase-messaging-sw.js', {
+    scope: '/Gardeniatoday/'
+    }).then(function(registration) {
+    console.log('[SW] ✅ Service Worker مسجل:', registration.scope);
+
+    // ✅ بعد تسجيل SW، نخبر Firebase أنه مسجل بالفعل
+    window.firebaseRegistration = registration;
+    }).catch(function(error) {
+    console.error('[SW] ❌ فشل التسجيل:', error);
+    });
+    });
+    }
+  </script>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js';
+
+    // ✅ استخدام بيانات المشروع الشغال
+    const firebaseConfig = {
+    apiKey: "AIzaSyCKKnkAg5kj0fgcbjSXqYjqXfF_RS4ZlGg",
+    authDomain: "latestgardeniatodayapp.firebaseapp.com",
+    projectId: "latestgardeniatodayapp",
+    storageBucket: "latestgardeniatodayapp.firebasestorage.app",
+    messagingSenderId: "669309172822",
+    appId: "1:669309172822:web:5b19431fc2669131698ff7",
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    const VAPID_KEY = "BDMCuyIBNSOFBGKIipKVIojndaNOSEzur2VuRoZvZLCOrjVHSCYW0Jely7sqD855qz9AWOy-uGjW6QTtrYYWgnA";
+
+    // ✅ دالة طلب الإذن
+    async function requestNotificationPermission() {
+    try {
+    console.log('🔔 طلب إذن الإشعارات...');
+
+    const permission = await Notification.requestPermission();
+    console.log('📊 نتيجة الإذن:', permission);
+
+    if (permission === 'granted') {
+    console.log('✅ تم منح الإذن');
+
+    try {
+    // ✅ استخدام Service Worker المسجل بالفعل
+    const token = await getToken(messaging, {
+    vapidKey: VAPID_KEY,
+    serviceWorkerRegistration: window.firebaseRegistration // ✅ نمرر الـ SW المسجل
+    });
+
+    if (token) {
+    console.log('✅ FCM Token:', token.substring(0, 20) + '...');
+    console.log('📋 FCM Token كامل:', token);
+
+    localStorage.setItem('fcm_token', token);
+    }
+    } catch (tokenError) {
+    console.log('⚠️ خطأ في Token:', tokenError);
+    }
+    }
+    } catch (error) {
+    console.error('❌ خطأ:', error);
+    }
+    }
+
+    // ✅ انتظر تسجيل SW ثم اطلب الإذن
+    function waitForServiceWorker() {
+    if (window.firebaseRegistration) {
+    requestNotificationPermission();
+    } else {
+    setTimeout(waitForServiceWorker, 500);
+    }
+    }
+
+    // ✅ ابدأ بعد تحميل الصفحة
+    window.addEventListener('load', waitForServiceWorker);
+
+    // ✅ الاستماع للرسائل
+    onMessage(messaging, (payload) => {
+    console.log('📨 رسالة:', payload);
+
+    // استخدم Service Worker لإظهار الإشعار
+    if (window.firebaseRegistration && Notification.permission === 'granted') {
+    window.firebaseRegistration.showNotification(
+    payload.notification?.title || 'جاردينيا توداي',
+    {
+    body: payload.notification?.body || 'إشعار جديد',
+    icon: '/Gardeniatoday/icons/Icon-192.png',
+    badge: '/Gardeniatoday/icons/Icon-192.png',
+    vibrate: [200, 100, 200],
+    requireInteraction: true,
+    silent: false
+    }
+    );
+    }
+    });
+
+    // إخفاء splash screen
+    window.hideSplash = () => {
+    const splash = document.getElementById('splash');
+    if (splash) {
+    splash.classList.add('hidden');
+    setTimeout(() => splash.remove(), 300);
+    }
+    };
+
+    document.addEventListener('flutter-first-frame', window.hideSplash);
+    setTimeout(window.hideSplash, 3000);
+
+    // إنشاء الجزيئات
+    function createParticles() {
+    const container = document.getElementById('particles-container');
+    if (!container) return;
+    for (let i = 0; i < 30; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    const size = Math.random() * 6 + 2;
+    particle.style.width = size + 'px';
+    particle.style.height = size + 'px';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.top = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 2 + 's';
+    particle.style.animationDuration = (Math.random() * 2 + 2) + 's';
+    container.appendChild(particle);
+    }
+    }
+    createParticles();
+
+    const script = document.createElement('script');
+    script.src = 'flutter_bootstrap.js';
+    script.async = true;
+    document.head.appendChild(script);
+  </script>
+</head>
+<body>
+<div id="splash">
+  <div id="particles-container"></div>
+  <div class="content">
+    <div class="logo-wrapper">
+      <img src="icons/Icon-192.png" alt="Gardenia Today">
+    </div>
+    <div class="app-name">جاردينيا توداي</div>
+    <div class="tagline">كل خدماتك في مكان واحد</div>
+    <div class="loader-ring">
+      <div class="loader-spinner"></div>
+    </div>
+    <div class="loader-text">جاري التحميل...</div>
+  </div>
+</div>
+</body>
+</html>
+
+<!--
+<!DOCTYPE html>
+<html>
+<head>
+<base href="/Gardeniatoday/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جاردينيا توداي</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="icons/Icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+<style>
+body { margin:0; padding:0; overflow:hidden; font-family:'Cairo',sans-serif; }
+#splash {
+position:fixed; top:0; left:0; width:100vw; height:100vh;
+background:radial-gradient(circle at top left, #065F46, #047857, #F59E0B);
+display:flex; justify-content:center; align-items:center;
+z-index:9999; transition:opacity 0.3s ease-out; opacity:1; visibility:visible;
+}
+#splash.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+#particles-container { position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden; }
+.particle { position:absolute; background:rgba(255,255,255,0.15); border-radius:50%; pointer-events:none; animation:float 3s ease-in-out infinite; }
+@keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-20px); } }
+.content { position:relative; z-index:10; text-align:center; padding:20px; max-width:90vw; }
+.logo-wrapper { width:120px; height:120px; border-radius:50%; background:white; box-shadow:0 20px 40px rgba(0,0,0,0.3); overflow:hidden; margin:0 auto 20px; }
+.logo-wrapper img { width:100%; height:100%; object-fit:cover; }
+.app-name { font-size:32px; font-weight:900; margin:15px 0 5px; background:linear-gradient(135deg, #FEFCE8, #FFE5B4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.tagline { font-size:16px; color:rgba(255,255,255,0.9); margin-bottom:30px; }
+.loader-ring { width:40px; height:40px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; }
+.loader-spinner { width:24px; height:24px; border:2px solid transparent; border-top-color:#F59E0B; border-radius:50%; animation:spin 0.8s linear infinite; }
+@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+.loader-text { font-size:13px; color:rgba(255,255,255,0.7); }
+@media (min-width:600px) { .logo-wrapper { width:150px; height:150px; } .app-name { font-size:42px; } }
+</style>
+</head>
+<body>
+
+<div id="splash">
+<div id="particles-container"></div>
+<div class="content">
+<div class="logo-wrapper"><img src="icons/Icon-192.png" alt="Gardenia Today"></div>
+<div class="app-name">جاردينيا توداي</div>
+<div class="tagline">كل خدماتك في مكان واحد</div>
+<div class="loader-ring"><div class="loader-spinner"></div></div>
+<div class="loader-text" id="loadingText">جاري التحميل...</div>
+</div>
+</div>
+
+<script>
+const LOG_PREFIX = '📋 [HTML]';
+function logEvent(event, details = '') {
+const time = new Date().toLocaleTimeString('ar-EG', {
+hour12: false, hour: '2-digit', minute: '2-digit',
+second: '2-digit', fractionalSecondDigits: 3
+});
+console.log(`${LOG_PREFIX} ${time} - ${event} ${details}`);
+}
+
+let splashHidden = false;
+
+function hideSplash() {
+if (splashHidden) return;
+splashHidden = true;
+
+logEvent('🔵 إخفاء السبلاش');
+const splash = document.getElementById('splash');
+if (!splash) return;
+
+splash.classList.add('hidden');
+
+// إزالة العنصر بعد انتهاء التأثير
+setTimeout(() => {
+if (splash?.parentNode) splash.remove();
+}, 300);
+}
+
+window.hideSplash = hideSplash;
+
+// ══════════════════════════════════════════════════════
+//  ✅ تسجيل Firebase SW - مرة واحدة فقط
+// ══════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+// تأخير تسجيل Firebase SW لتسريع التحميل الأولي
+setTimeout(() => {
+navigator.serviceWorker
+.register('/Gardeniatoday/firebase-messaging-sw.js', {
+scope: '/Gardeniatoday/'
+})
+.then(reg => logEvent('✅ Firebase SW مسجّل', reg.scope))
+.catch(err => logEvent('❌ Firebase SW فشل:', err.message));
+}, 2000);
+}
+
+// ══════════════════════════════════════════════════════
+//  ✅ إنشاء الجسيمات المتحركة
+// ══════════════════════════════════════════════════════
+function createParticles() {
+const container = document.getElementById('particles-container');
+if (!container) return;
+container.innerHTML = '';
+for (let i = 0; i < 15; i++) {
+const p = document.createElement('div');
+p.className = 'particle';
+const size = Math.random() * 30 + 8;
+p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*2}s;animation-duration:${Math.random()*3+2}s`;
+container.appendChild(p);
+}
+}
+
+// ══════════════════════════════════════════════════════
+//  ✅ نظام مبسط لإخفاء السبلاش
+// ══════════════════════════════════════════════════════
+
+// 1. الاستماع لحدث Flutter
+document.addEventListener('flutter-first-frame', hideSplash);
+
+// 2. الاستماع لرسائل window
+window.addEventListener('message', (e) => {
+if (e.data === 'hide-html-splash') hideSplash();
+});
+
+// 3. إخفاء فوري بعد 3 ثواني كحد أقصى
+setTimeout(hideSplash, 3000);
+
+// 4. إخفاء عند اكتمال التحميل الأساسي
+window.addEventListener('load', () => {
+setTimeout(hideSplash, 1500);
+});
+
+// ══════════════════════════════════════════════════════
+//  ✅ بدء التشغيل
+// ══════════════════════════════════════════════════════
+logEvent('🚀 بدء التشغيل');
+createParticles();
+
+// تحميل Flutter بسرعة
+const script = document.createElement('script');
+script.src = 'flutter_bootstrap.js';
+script.async = true;
+script.onload = () => logEvent('✅ flutter_bootstrap.js تم التحميل');
+document.head.appendChild(script);
+
+</script>
+
+</body>
+</html>-->
+
+<!--
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="/Gardeniatoday/">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>جاردينيا توداي</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    body { margin:0; padding:0; overflow:hidden; font-family:'Cairo',sans-serif; }
+    #splash {
+    position:fixed; top:0; left:0; width:100vw; height:100vh;
+    background:radial-gradient(circle at top left, #065F46, #047857, #F59E0B);
+    display:flex; justify-content:center; align-items:center;
+    z-index:9999; transition:opacity 0.3s ease-out; opacity:1; visibility:visible;
+    }
+    #splash.hidden { opacity:0; visibility:hidden; pointer-events:none; }
+    #particles-container { position:absolute; top:0; left:0; width:100%; height:100%; overflow:hidden; }
+    .particle { position:absolute; background:rgba(255,255,255,0.15); border-radius:50%; pointer-events:none; animation:float 3s ease-in-out infinite; }
+    @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-20px); } }
+    .content { position:relative; z-index:10; text-align:center; padding:20px; max-width:90vw; }
+    .logo-wrapper { width:120px; height:120px; border-radius:50%; background:white; box-shadow:0 20px 40px rgba(0,0,0,0.3); overflow:hidden; margin:0 auto 20px; }
+    .logo-wrapper img { width:100%; height:100%; object-fit:cover; }
+    .app-name { font-size:32px; font-weight:900; margin:15px 0 5px; background:linear-gradient(135deg, #FEFCE8, #FFE5B4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .tagline { font-size:16px; color:rgba(255,255,255,0.9); margin-bottom:30px; }
+    .loader-ring { width:40px; height:40px; border:2px solid rgba(255,255,255,0.3); border-radius:50%; margin:0 auto 12px; display:flex; align-items:center; justify-content:center; }
+    .loader-spinner { width:24px; height:24px; border:2px solid transparent; border-top-color:#F59E0B; border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+    .loader-text { font-size:13px; color:rgba(255,255,255,0.7); }
+    @media (min-width:600px) { .logo-wrapper { width:150px; height:150px; } .app-name { font-size:42px; } }
+  </style>
+</head>
+<body>
+
+<div id="splash">
+  <div id="particles-container"></div>
+  <div class="content">
+    <div class="logo-wrapper"><img src="icons/Icon-192.png" alt="Gardenia Today"></div>
+    <div class="app-name">جاردينيا توداي</div>
+    <div class="tagline">كل خدماتك في مكان واحد</div>
+    <div class="loader-ring"><div class="loader-spinner"></div></div>
+    <div class="loader-text" id="loadingText">جاري التحميل...</div>
+  </div>
+</div>
+
+<script>
+  const LOG_PREFIX = '📋 [HTML]';
+  function logEvent(event, details = '') {
+  const time = new Date().toLocaleTimeString('ar-EG', {
+  hour12: false, hour: '2-digit', minute: '2-digit',
+  second: '2-digit', fractionalSecondDigits: 3
+  });
+  console.log(`${LOG_PREFIX} ${time} - ${event} ${details}`);
+  }
+
+  let splashHidden = false;
+
+  function hideSplash() {
+  if (splashHidden) return;
+  splashHidden = true;
+
+  logEvent('🔵 إخفاء السبلاش');
+  const splash = document.getElementById('splash');
+  if (!splash) return;
+
+  splash.classList.add('hidden');
+
+  // إزالة العنصر بعد انتهاء التأثير
+  setTimeout(() => {
+  if (splash?.parentNode) splash.remove();
+  }, 300);
+  }
+
+  window.hideSplash = hideSplash;
+
+  // ══════════════════════════════════════════════════════
+  //  ✅ تسجيل Firebase SW - مرة واحدة فقط
+  // ══════════════════════════════════════════════════════
+  if ('serviceWorker' in navigator) {
+  // تأخير تسجيل Firebase SW لتسريع التحميل الأولي
+  setTimeout(() => {
+  navigator.serviceWorker
+  .register('/Gardeniatoday/firebase-messaging-sw.js', {
+  scope: '/Gardeniatoday/'
+  })
+  .then(reg => logEvent('✅ Firebase SW مسجّل', reg.scope))
+  .catch(err => logEvent('❌ Firebase SW فشل:', err.message));
+  }, 2000);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ✅ إنشاء الجسيمات المتحركة
+  // ══════════════════════════════════════════════════════
+  function createParticles() {
+  const container = document.getElementById('particles-container');
+  if (!container) return;
+  container.innerHTML = '';
+  for (let i = 0; i < 15; i++) {
+  const p = document.createElement('div');
+  p.className = 'particle';
+  const size = Math.random() * 30 + 8;
+  p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*2}s;animation-duration:${Math.random()*3+2}s`;
+  container.appendChild(p);
+  }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ✅ نظام مبسط لإخفاء السبلاش
+  // ══════════════════════════════════════════════════════
+
+  // 1. الاستماع لحدث Flutter
+  document.addEventListener('flutter-first-frame', hideSplash);
+
+  // 2. الاستماع لرسائل window
+  window.addEventListener('message', (e) => {
+  if (e.data === 'hide-html-splash') hideSplash();
+  });
+
+  // 3. إخفاء فوري بعد 3 ثواني كحد أقصى
+  setTimeout(hideSplash, 3000);
+
+  // 4. إخفاء عند اكتمال التحميل الأساسي
+  window.addEventListener('load', () => {
+  setTimeout(hideSplash, 1500);
+  });
+
+  // ══════════════════════════════════════════════════════
+  //  ✅ بدء التشغيل
+  // ══════════════════════════════════════════════════════
+  logEvent('🚀 بدء التشغيل');
+  createParticles();
+
+  // تحميل Flutter بسرعة
+  const script = document.createElement('script');
+  script.src = 'flutter_bootstrap.js';
+  script.async = true;
+  script.onload = () => logEvent('✅ flutter_bootstrap.js تم التحميل');
+  document.head.appendChild(script);
+
+</script>
+
+</body>
+</html>-->
