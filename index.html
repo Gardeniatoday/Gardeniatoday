@@ -32,7 +32,7 @@
     @keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
     .loader-text { font-size:13px; color:rgba(255,255,255,0.7); }
 
-    /* STYLES FOR PERSISTENT FOOTER - KEEPS IT ABOVE FLUTTER */
+    /* STYLES FOR PERSISTENT FOOTER */
     #persistent-footer {
       position: fixed;
       bottom: 0;
@@ -41,13 +41,13 @@
       padding: 12px 15px;
       background: linear-gradient(90deg, rgba(6,95,70,0.95) 0%, rgba(4,120,87,0.95) 100%);
       text-align: center;
-      z-index: 2147483647; /* Maximum z-index */
+      z-index: 2147483647;
       backdrop-filter: blur(5px);
       font-family: 'Cairo', sans-serif;
       box-sizing: border-box;
       border-top: 2px solid #F59E0B;
       box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
-      pointer-events: auto; /* Ensures links are clickable */
+      pointer-events: auto;
     }
     #persistent-footer span {
       color: white;
@@ -63,7 +63,6 @@
       font-weight: 600;
       font-size: 13px;
       display: inline-block;
-      transition: all 0.2s;
     }
     #persistent-footer a:hover {
       color: #FFE5B4;
@@ -75,12 +74,27 @@
       display: inline-block;
     }
 
+    /* GOOGLE VERIFICATION BANNER - Visible but small */
+    #google-verification-banner {
+      background: linear-gradient(90deg, #065F46, #047857);
+      color: white;
+      text-align: center;
+      padding: 4px 0;
+      font-family: 'Cairo', sans-serif;
+      font-size: 12px;
+      position: relative;
+      z-index: 2147483647;
+      border-bottom: 1px solid #F59E0B;
+      letter-spacing: 0.5px;
+    }
+
     @media (min-width:600px) {
       .logo-wrapper { width:150px; height:150px; }
       .app-name { font-size:42px; }
       .app-name-en { font-size:20px; }
       #persistent-footer span { font-size: 15px; }
       #persistent-footer a { font-size: 14px; }
+      #google-verification-banner { font-size: 13px; padding: 5px 0; }
     }
   </style>
 
@@ -199,6 +213,12 @@
   </script>
 </head>
 <body>
+
+<!-- ✅ GOOGLE VERIFICATION BANNER - Explicit app name -->
+<div id="google-verification-banner">
+  <strong>Gardenia Today</strong> | Official Application | جميع الحقوق محفوظة
+</div>
+
 <div id="splash">
   <div id="particles-container"></div>
   <div class="content">
@@ -215,7 +235,7 @@
   </div>
 </div>
 
-<!-- PERSISTENT FOOTER for Google Verification - ALWAYS VISIBLE -->
+<!-- PERSISTENT FOOTER for Google Verification -->
 <div id="persistent-footer">
   <span>🌿 Gardenia Today</span>
   <span class="separator">|</span>
@@ -226,7 +246,7 @@
   <span style="color: rgba(255,255,255,0.5); font-size: 11px;">© 2026</span>
 </div>
 
-<!-- Ensure Flutter doesn't cover the footer -->
+<!-- Ensure footer stays on top -->
 <script>
   window.addEventListener('load', function() {
     setTimeout(function() {
