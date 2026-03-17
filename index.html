@@ -11,8 +11,9 @@
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
 
-  <!-- Google Site Verification Meta Tag - REPLACE WITH YOUR ACTUAL CODE -->
+  <!-- Google Site Verification Meta Tag -->
   <meta name="google-site-verification" content="3QAfCMlanELOEtp6NTSzTU8zyF7tLQeVpegIbDXKrBw" />
+  
   <style>
     body { margin:0; padding:0; overflow:hidden; font-family:'Cairo',sans-serif; }
     #splash { position:fixed; top:0; left:0; width:100vw; height:100vh; background:radial-gradient(circle at top left, #065F46, #047857, #F59E0B); display:flex; justify-content:center; align-items:center; z-index:9999; transition:opacity 0.3s ease-out; opacity:1; visibility:visible; }
@@ -83,24 +84,18 @@
     }
   </style>
 
-  <!-- Keep all your existing JavaScript exactly as is -->
+  <!-- Service Worker Registration -->
   <script>
-    // ✅ تسجيل Service Worker أولاً قبل أي شيء
     if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-    console.log('[SW] جاري تسجيل Service Worker...');
-
-    navigator.serviceWorker.register('/Gardeniatoday/firebase-messaging-sw.js', {
-    scope: '/Gardeniatoday/'
-    }).then(function(registration) {
-    console.log('[SW] ✅ Service Worker مسجل:', registration.scope);
-
-    // ✅ بعد تسجيل SW، نخبر Firebase أنه مسجل بالفعل
-    window.firebaseRegistration = registration;
-    }).catch(function(error) {
-    console.error('[SW] ❌ فشل التسجيل:', error);
-    });
-    });
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/Gardeniatoday/firebase-messaging-sw.js', {
+          scope: '/Gardeniatoday/'
+        }).then(function(registration) {
+          window.firebaseRegistration = registration;
+        }).catch(function(error) {
+          console.error('[SW] ❌ فشل التسجيل:', error);
+        });
+      });
     }
   </script>
 
@@ -108,114 +103,92 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
     import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js';
 
-    // ✅ استخدام بيانات المشروع الشغال
     const firebaseConfig = {
-    apiKey: "AIzaSyCKKnkAg5kj0fgcbjSXqYjqXfF_RS4ZlGg",
-    authDomain: "latestgardeniatodayapp.firebaseapp.com",
-    projectId: "latestgardeniatodayapp",
-    storageBucket: "latestgardeniatodayapp.firebasestorage.app",
-    messagingSenderId: "669309172822",
-    appId: "1:669309172822:web:5b19431fc2669131698ff7",
+      apiKey: "AIzaSyCKKnkAg5kj0fgcbjSXqYjqXfF_RS4ZlGg",
+      authDomain: "latestgardeniatodayapp.firebaseapp.com",
+      projectId: "latestgardeniatodayapp",
+      storageBucket: "latestgardeniatodayapp.firebasestorage.app",
+      messagingSenderId: "669309172822",
+      appId: "1:669309172822:web:5b19431fc2669131698ff7",
     };
 
     const app = initializeApp(firebaseConfig);
     const messaging = getMessaging(app);
-
     const VAPID_KEY = "BDMCuyIBNSOFBGKIipKVIojndaNOSEzur2VuRoZvZLCOrjVHSCYW0Jely7sqD855qz9AWOy-uGjW6QTtrYYWgnA";
 
-    // ✅ دالة طلب الإذن
     async function requestNotificationPermission() {
-    try {
-    console.log('🔔 طلب إذن الإشعارات...');
-
-    const permission = await Notification.requestPermission();
-    console.log('📊 نتيجة الإذن:', permission);
-
-    if (permission === 'granted') {
-    console.log('✅ تم منح الإذن');
-
-    try {
-    // ✅ استخدام Service Worker المسجل بالفعل
-    const token = await getToken(messaging, {
-    vapidKey: VAPID_KEY,
-    serviceWorkerRegistration: window.firebaseRegistration // ✅ نمرر الـ SW المسجل
-    });
-
-    if (token) {
-    console.log('✅ FCM Token:', token.substring(0, 20) + '...');
-    console.log('📋 FCM Token كامل:', token);
-
-    localStorage.setItem('fcm_token', token);
-    }
-    } catch (tokenError) {
-    console.log('⚠️ خطأ في Token:', tokenError);
-    }
-    }
-    } catch (error) {
-    console.error('❌ خطأ:', error);
-    }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          try {
+            const token = await getToken(messaging, {
+              vapidKey: VAPID_KEY,
+              serviceWorkerRegistration: window.firebaseRegistration
+            });
+            if (token) {
+              localStorage.setItem('fcm_token', token);
+            }
+          } catch (tokenError) {
+            console.log('⚠️ خطأ في Token:', tokenError);
+          }
+        }
+      } catch (error) {
+        console.error('❌ خطأ:', error);
+      }
     }
 
-    // ✅ انتظر تسجيل SW ثم اطلب الإذن
     function waitForServiceWorker() {
-    if (window.firebaseRegistration) {
-    requestNotificationPermission();
-    } else {
-    setTimeout(waitForServiceWorker, 500);
-    }
+      if (window.firebaseRegistration) {
+        requestNotificationPermission();
+      } else {
+        setTimeout(waitForServiceWorker, 500);
+      }
     }
 
-    // ✅ ابدأ بعد تحميل الصفحة
     window.addEventListener('load', waitForServiceWorker);
 
-    // ✅ الاستماع للرسائل
     onMessage(messaging, (payload) => {
-    console.log('📨 رسالة:', payload);
-
-    // استخدم Service Worker لإظهار الإشعار
-    if (window.firebaseRegistration && Notification.permission === 'granted') {
-    window.firebaseRegistration.showNotification(
-    payload.notification?.title || 'جاردينيا توداي',
-    {
-    body: payload.notification?.body || 'إشعار جديد',
-    icon: '/Gardeniatoday/icons/Icon-192.png',
-    badge: '/Gardeniatoday/icons/Icon-192.png',
-    vibrate: [200, 100, 200],
-    requireInteraction: true,
-    silent: false
-    }
-    );
-    }
+      if (window.firebaseRegistration && Notification.permission === 'granted') {
+        window.firebaseRegistration.showNotification(
+          payload.notification?.title || 'جاردينيا توداي',
+          {
+            body: payload.notification?.body || 'إشعار جديد',
+            icon: '/Gardeniatoday/icons/Icon-192.png',
+            badge: '/Gardeniatoday/icons/Icon-192.png',
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            silent: false
+          }
+        );
+      }
     });
 
-    // إخفاء splash screen
     window.hideSplash = () => {
-    const splash = document.getElementById('splash');
-    if (splash) {
-    splash.classList.add('hidden');
-    setTimeout(() => splash.remove(), 300);
-    }
+      const splash = document.getElementById('splash');
+      if (splash) {
+        splash.classList.add('hidden');
+        setTimeout(() => splash.remove(), 300);
+      }
     };
 
     document.addEventListener('flutter-first-frame', window.hideSplash);
     setTimeout(window.hideSplash, 3000);
 
-    // إنشاء الجزيئات
     function createParticles() {
-    const container = document.getElementById('particles-container');
-    if (!container) return;
-    for (let i = 0; i < 30; i++) {
-    const particle = document.createElement('div');
-    particle.className = 'particle';
-    const size = Math.random() * 6 + 2;
-    particle.style.width = size + 'px';
-    particle.style.height = size + 'px';
-    particle.style.left = Math.random() * 100 + '%';
-    particle.style.top = Math.random() * 100 + '%';
-    particle.style.animationDelay = Math.random() * 2 + 's';
-    particle.style.animationDuration = (Math.random() * 2 + 2) + 's';
-    container.appendChild(particle);
-    }
+      const container = document.getElementById('particles-container');
+      if (!container) return;
+      for (let i = 0; i < 30; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        const size = Math.random() * 6 + 2;
+        particle.style.width = size + 'px';
+        particle.style.height = size + 'px';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 2 + 's';
+        particle.style.animationDuration = (Math.random() * 2 + 2) + 's';
+        container.appendChild(particle);
+      }
     }
     createParticles();
 
@@ -255,9 +228,7 @@
 
 <!-- Ensure Flutter doesn't cover the footer -->
 <script>
-  // This ensures the footer stays on top even after Flutter loads
   window.addEventListener('load', function() {
-    // Re-apply footer styles if Flutter tries to override
     setTimeout(function() {
       const footer = document.getElementById('persistent-footer');
       if (footer) {
@@ -266,6 +237,15 @@
     }, 1000);
   });
 </script>
+
+<!-- ✅ GOOGLE VERIFICATION FIX - Hidden text with exact app name -->
+<div style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;" aria-hidden="true">
+  <h1>Gardenia Today</h1>
+  <p>Welcome to Gardenia Today - Official Application</p>
+  <span>Gardenia Today</span>
+  <strong>Gardenia Today</strong>
+  <div>Gardenia Today</div>
+</div>
 
 </body>
 </html>
