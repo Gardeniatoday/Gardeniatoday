@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "224551076243",
+    "project_id": "wesal-80b97",
+    "storage_bucket": "wesal-80b97.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:224551076243:android:2f218827f25808b8bee866",
+        "android_client_info": {
+          "package_name": "com.gardenia.today"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDGO7apwkVGo5YEl8X6rDxtw7wB4mIgYw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

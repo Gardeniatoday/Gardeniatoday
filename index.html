@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <base href="/Gardeniatoday/">
+  <title>جاردينيا توداي - Gardenia Today</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.png">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <meta name="google-site-verification" content="3QAfCMlanELOEtp6NTSzTU8zyF7tLQeVpegIbDXKrBw" />
+  <meta name="google-signin-client_id" content="820905026097-j6c3446ofo3721dafp1mci7us3i47n2l.apps.googleusercontent.com">
+
+  <style>
+    /* ── Reset ── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { margin:0; padding:0; overflow:hidden; font-family:'Cairo',sans-serif; background:#060E1A; }
+
+    /* ══════════════════════════════════════════════
+       SPLASH  — matches Flutter _SplashScreenState
+    ══════════════════════════════════════════════ */
+    #splash {
+      position: fixed; inset: 0;
+      background: radial-gradient(ellipse 110% 110% at 50% 40%, #0D2137 0%, #060E1A 100%);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+      opacity: 1; visibility: visible;
+    }
+    #splash.hidden {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    /* ── Grid overlay (matches _BgPainter) ── */
+    #splash::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.020) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.020) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+    }
+
+    /* ── Green center ambient glow (matches BgPainter second radial) ── */
+    #splash::after {
+      content: '';
+      position: absolute; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 70% 70% at 50% 50%, rgba(16,185,129,0.10) 0%, transparent 100%);
+      pointer-events: none;
+    }
+
+    /* ── HUD corners ── */
+    .hud-corner {
+      position: absolute; width: 30px; height: 30px; z-index: 2;
+    }
+    .hud-corner::before, .hud-corner::after {
+      content: ''; position: absolute;
+      background: rgba(16,185,129,0.22);
+    }
+    .hud-corner::before { width: 100%; height: 1px; top: 0; left: 0; }
+    .hud-corner::after  { width: 1px; height: 100%; top: 0; left: 0; }
+    .hud-tl { top: 22px; left: 22px; }
+    .hud-tr { top: 22px; right: 22px; transform: scaleX(-1); }
+    .hud-bl { bottom: 22px; left: 22px; transform: scaleY(-1); }
+    .hud-br { bottom: 22px; right: 22px; transform: scale(-1); }
+
+    /* ── Particles canvas (positioned absolute) ── */
+    #particles-canvas {
+      position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    }
+
+    /* ── Ripple rings canvas ── */
+    #ripple-canvas {
+      position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    }
+
+    /* ── Logo badge (center) ── */
+    #logo-badge {
+      position: relative; z-index: 10;
+      width: 240px; height: 240px;
+      display: flex; align-items: center; justify-content: center;
+      /* entry animation */
+      opacity: 0; transform: scale(0);
+      animation: logoEntrance 1000ms cubic-bezier(0.34,1.56,0.64,1) 200ms forwards;
+    }
+    @keyframes logoEntrance {
+      from { opacity: 0; transform: scale(0); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* outer halo */
+    .badge-halo {
+      position: absolute; inset: 0; border-radius: 50%;
+      background: radial-gradient(circle, rgba(16,185,129,0.20) 0%, transparent 70%);
+    }
+
+    /* static thin guide ring */
+    .badge-guide-ring {
+      position: absolute;
+      width: 216px; height: 216px;
+      border-radius: 50%;
+      border: 0.5px solid rgba(16,185,129,0.12);
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+    }
+
+    /* orbit ring drawn on canvas */
+    #orbit-canvas {
+      position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    }
+
+    /* main logo circle */
+    .logo-circle {
+      position: absolute;
+      width: 172px; height: 172px; border-radius: 50%;
+      background: linear-gradient(135deg, #1A3A2A 0%, #0D2018 100%);
+      border: 2.5px solid rgba(16,185,129,0.45);
+      box-shadow:
+        0 0 60px 6px  rgba(16,185,129,0.35),
+        0 0 120px 12px rgba(5,150,105,0.25);
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      top: 50%; left: 50%; transform: translate(-50%,-50%);
+    }
+    .logo-circle img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+    }
+    /* shimmer sweep */
+    .shimmer-sweep {
+      position: absolute; inset: 0; overflow: hidden; border-radius: 50%; z-index: 1;
+    }
+    .shimmer-sweep::after {
+      content: '';
+      position: absolute;
+      top: -60px; width: 36px; height: 300px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0)   0%,
+        rgba(255,255,255,0.22) 50%,
+        rgba(255,255,255,0)   100%
+      );
+      transform: rotate(36deg);
+      animation: shimmerMove 1800ms ease-in-out 600ms 1 forwards;
+      left: -100%;
+    }
+    @keyframes shimmerMove {
+      from { left: -40%; }
+      to   { left: 140%; }
+    }
+
+    /* online pulse dot */
+    .online-dot {
+      position: absolute;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: #34D399;
+      border: 2.5px solid #060E1A;
+      top: calc(50% - 86px + 14px);
+      right: calc(50% - 86px + 14px);
+      box-shadow: 0 0 14px 2px rgba(16,185,129,0.80);
+      animation: dotPulse 1800ms ease-in-out infinite alternate;
+    }
+    @keyframes dotPulse {
+      from { opacity: 0.55; box-shadow: 0 0 8px 1px rgba(16,185,129,0.55); }
+      to   { opacity: 1.00; box-shadow: 0 0 18px 4px rgba(16,185,129,0.90); }
+    }
+
+    /* fallback if image fails */
+    .fallback-icon {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 10px; color: #10B981; font-size: 64px;
+    }
+    .fallback-line {
+      width: 44px; height: 2px;
+      background: rgba(16,185,129,0.4);
+      border-radius: 1px;
+    }
+
+    /* ── Header & Footer ── */
+    #once-header {
+      position: fixed; top: 0; left: 0; width: 100%;
+      background: linear-gradient(90deg, #065F46, #047857);
+      color: white; text-align: center; padding: 10px 0;
+      font-family: 'Cairo', sans-serif; font-size: 14px; font-weight: 600;
+      z-index: 2147483647; border-bottom: 2px solid #F59E0B;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      transition: transform 0.3s ease-in-out; transform: translateY(0);
+    }
+    #once-header.hidden { transform: translateY(-100%); }
+    .header-content {
+      display: flex; align-items: center; justify-content: center;
+      position: relative; padding: 0 40px;
+    }
+    .header-content span { color: #F59E0B; font-weight: 700; margin: 0 5px; }
+    .header-close, .footer-close {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: #F59E0B; color: #065F46; border: none; border-radius: 50%;
+      width: 24px; height: 24px; font-size: 14px; font-weight: bold;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s; padding: 0; line-height: 1;
+    }
+    .header-close:hover, .footer-close:hover {
+      background: #FFE5B4; transform: translateY(-50%) scale(1.1);
+    }
+
+    #once-footer {
+      position: fixed; bottom: 0; left: 0; width: 100%;
+      padding: 8px 15px;
+      background: linear-gradient(90deg, #065F46, #047857);
+      text-align: center; z-index: 2147483647;
+      font-family: 'Cairo', sans-serif; box-sizing: border-box;
+      border-top: 2px solid #F59E0B; box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+      transition: transform 0.3s ease-in-out; transform: translateY(0);
+    }
+    #once-footer.hidden { transform: translateY(100%); }
+    .footer-content {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; position: relative; padding-right: 40px;
+    }
+    #once-footer span { color: white; font-weight: 600; margin: 0 8px; font-size: 13px; }
+    #once-footer a {
+      color: #F59E0B; margin: 0 8px; text-decoration: none;
+      font-weight: 600; font-size: 12px;
+    }
+    .footer-separator { color: rgba(255,255,255,0.3); margin: 0 2px; }
+
+    .google-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0;
+      margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+      white-space: nowrap; border: 0;
+    }
+
+    @media (max-width: 600px) {
+      .footer-content { font-size: 11px; padding-right: 35px; }
+      #once-footer span, #once-footer a { font-size: 11px; margin: 0 4px; }
+      .footer-close, .header-close { width: 22px; height: 22px; font-size: 12px; }
+      #once-header { font-size: 12px; padding: 8px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     SPLASH — dark tech style (matches Flutter)
+══════════════════════════════════════════════ -->
+<div id="splash">
+
+  <!-- HUD corners -->
+  <div class="hud-corner hud-tl"></div>
+  <div class="hud-corner hud-tr"></div>
+  <div class="hud-corner hud-bl"></div>
+  <div class="hud-corner hud-br"></div>
+
+  <!-- Ambient particles -->
+  <canvas id="particles-canvas"></canvas>
+
+  <!-- Ripple rings -->
+  <canvas id="ripple-canvas"></canvas>
+
+  <!-- Logo badge -->
+  <div id="logo-badge">
+    <div class="badge-halo"></div>
+    <div class="badge-guide-ring"></div>
+
+    <!-- Orbit dot (canvas, inside badge) -->
+    <canvas id="orbit-canvas" width="240" height="240"></canvas>
+
+    <!-- Main circle -->
+    <div class="logo-circle">
+      <img
+              src="icons/Icon-192.png"
+              alt="Gardenia Today"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+      >
+      <div class="fallback-icon" style="display:none;">
+        <span>📍</span>
+        <div class="fallback-line"></div>
+      </div>
+      <div class="shimmer-sweep"></div>
+    </div>
+
+    <!-- Online pulse dot -->
+    <div class="online-dot"></div>
+  </div>
+
+</div>
+
+<!-- Header -->
+<div id="once-header" style="display:none;">
+  <div class="header-content">
+    <span>©</span> جميع الحقوق محفوظة - Gardenia Today <span>2026</span>
+    <button class="header-close" id="header-close">✕</button>
+  </div>
+</div>
+
+<!-- Footer -->
+<div id="once-footer" style="display:none;">
+  <div class="footer-content">
+    <span>🌿 Gardenia Today</span>
+    <span class="footer-separator">|</span>
+    <a href="privacy.html" target="_blank">🔒 Privacy Policy</a>
+    <span class="footer-separator">|</span>
+    <a href="terms.html" target="_blank">📋 Terms of Service</a>
+    <span class="footer-separator">|</span>
+    <span style="color:rgba(255,255,255,0.7);">© 2026</span>
+    <button class="footer-close" id="footer-close">✕</button>
+  </div>
+</div>
+
+<!-- Google hidden -->
+<div class="google-hidden">
+  <h1>Gardenia Today</h1>
+  <p>Welcome to Gardenia Today - Official Application</p>
+</div>
+
+<script>
+  // ══════════════════════════════════════════════
+  //  Particles (matches Flutter _ParticleLayer)
+  // ══════════════════════════════════════════════
+  (function() {
+    var canvas = document.getElementById('particles-canvas');
+    var ctx = canvas.getContext('2d');
+
+    var rng = (function(seed) {
+      return function() {
+        seed = (seed * 9301 + 49297) % 233280;
+        return seed / 233280;
+      };
+    })(42);
+
+    function buildParticles() {
+      var pts = [];
+      for (var i = 0; i < 20; i++) {
+        pts.push({
+          x:        0.04 + rng() * 0.92,
+          startY:   0.35 + rng() * 0.60,
+          size:     1.0  + rng() * 2.5,
+          duration: 3.5  + rng() * 4.0,
+          delay:    rng() * 2.5,
+          opacity:  0.20 + rng() * 0.45,
+        });
+      }
+      return pts;
+    }
+
+    var particles = buildParticles();
+    var startTime = performance.now();
+    var cycleDuration = 7000; // matches Flutter 7s repeat
+
+    function drawParticles(now) {
+      var W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      var progress = ((now - startTime) % cycleDuration) / cycleDuration;
+
+      particles.forEach(function(p) {
+        var phase = ((progress * 7.0 - p.delay) / p.duration);
+        phase = Math.max(0, Math.min(1, phase));
+        var opacity;
+        if (phase < 0.08)       opacity = (phase / 0.08) * p.opacity;
+        else if (phase > 0.85)  opacity = ((1 - phase) / 0.15) * p.opacity;
+        else                    opacity = p.opacity;
+
+        var yOffset = phase * 220;
+        var x = p.x * W;
+        var y = p.startY * H - yOffset;
+
+        ctx.beginPath();
+        ctx.arc(x, y, p.size / 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(52,211,153,' + opacity.toFixed(3) + ')'; // _kGreenMid
+        ctx.fill();
+      });
+    }
+
+    function resizeParticles() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeParticles);
+    resizeParticles();
+
+    window._particleLoop = function(now) { drawParticles(now); };
+  })();
+
+  // ══════════════════════════════════════════════
+  //  Ripple rings (matches Flutter _RippleRings)
+  // ══════════════════════════════════════════════
+  (function() {
+    var canvas = document.getElementById('ripple-canvas');
+    var ctx = canvas.getContext('2d');
+    var startTime = null; // starts after logo entrance (+600ms)
+    var duration = 2600;  // matches Flutter _ringCtrl duration
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    var maxRadius;
+    function getMaxRadius() {
+      return Math.min(canvas.width, canvas.height) * 0.68;
+    }
+
+    var colors = [
+      [16, 185, 129],  // _kGreen
+      [52, 211, 153],  // _kGreenMid
+      [5,  150, 105],  // _kGreenDark
+      [16, 185, 129],  // _kGreen * 0.5
+    ];
+    var offsets = [0, 0.25, 0.50, 0.75];
+
+    function drawRing(cx, cy, progress, maxR, color, alphaScale) {
+      if (progress <= 0) return;
+      var r       = maxR * progress;
+      var opacity = (1 - progress) * 0.45 * alphaScale;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(' + color[0] + ',' + color[1] + ',' + color[2] + ',' + opacity.toFixed(3) + ')';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    function drawRipples(now) {
+      if (!startTime) return;
+      var elapsed  = now - startTime;
+      var progress = Math.min(elapsed / duration, 1);
+      var cx = canvas.width / 2, cy = canvas.height / 2;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      maxRadius = getMaxRadius();
+
+      for (var i = 0; i < 4; i++) {
+        var p  = Math.max(0, progress - offsets[i]);
+        var as = (i === 3) ? 0.5 : 1.0;
+        drawRing(cx, cy, p, maxRadius, colors[i], as);
+      }
+    }
+
+    window._rippleStart = function() { startTime = performance.now(); };
+    window._rippleDraw  = function(now) { drawRipples(now); };
+  })();
+
+  // ══════════════════════════════════════════════
+  //  Orbit (matches Flutter _OrbitPainter, 12s repeat)
+  // ══════════════════════════════════════════════
+  (function() {
+    var canvas = document.getElementById('orbit-canvas');
+    var ctx    = canvas.getContext('2d');
+    var startTime = performance.now();
+    var period    = 12000; // matches Flutter 12s
+    var orbitR    = 110;
+    var cx = 120, cy = 120; // center of 240×240 badge
+
+    function drawOrbit(now) {
+      ctx.clearRect(0, 0, 240, 240);
+      var angle = ((now - startTime) % period) / period * Math.PI * 2;
+
+      // static guide ring (thin)
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitR, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(16,185,129,0.18)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      var dotX = cx + orbitR * Math.cos(angle);
+      var dotY = cy + orbitR * Math.sin(angle);
+
+      // glow halo
+      var grad = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, 14);
+      grad.addColorStop(0, 'rgba(52,211,153,0.28)');
+      grad.addColorStop(1, 'rgba(52,211,153,0)');
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 14, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // dot
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#34D399';
+      ctx.fill();
+
+      // comet tail arc
+      ctx.beginPath();
+      ctx.arc(cx, cy, orbitR, angle - 0.9, angle);
+      ctx.strokeStyle = 'rgba(52,211,153,0.20)';
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+
+    window._orbitDraw = function(now) { drawOrbit(now); };
+  })();
+
+  // ══════════════════════════════════════════════
+  //  Master animation loop
+  // ══════════════════════════════════════════════
+  var splashActive = true;
+
+  function animLoop(now) {
+    if (!splashActive) return;
+    window._particleLoop(now);
+    window._rippleDraw(now);
+    window._orbitDraw(now);
+    requestAnimationFrame(animLoop);
+  }
+
+  // Start rings + shimmer after 600ms (matches Flutter sequence)
+  setTimeout(function() {
+    window._rippleStart();
+  }, 600);
+
+  requestAnimationFrame(animLoop);
+
+  // ══════════════════════════════════════════════
+  //  Splash hide — iOS safe
+  // ══════════════════════════════════════════════
+  var splashHidden = false;
+
+  function hideSplash() {
+    if (splashHidden) return;
+    splashHidden = true;
+    splashActive = false;
+
+    var splash = document.getElementById('splash');
+    if (!splash) return;
+    splash.style.display = 'flex';
+    void splash.offsetHeight;
+    splash.classList.add('hidden');
+
+    setTimeout(function() {
+      if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+    }, 600);
+  }
+
+  window.hideSplash = hideSplash;
+
+  function hideSplashSafe() {
+    if (window.requestAnimationFrame) {
+      requestAnimationFrame(function() { requestAnimationFrame(hideSplash); });
+    } else {
+      hideSplash();
+    }
+  }
+
+  // ── Multiple triggers ──
+  document.addEventListener('flutter-first-frame', hideSplashSafe);
+  window.addEventListener('message', function(e) {
+    if (e.data === 'hide-html-splash') hideSplashSafe();
+  });
+  setTimeout(hideSplashSafe, 4000);
+  setTimeout(hideSplashSafe, 7000);
+  setTimeout(hideSplashSafe, 12000);
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && !splashHidden) setTimeout(hideSplashSafe, 500);
+  });
+  window.addEventListener('focus', function() {
+    if (!splashHidden) setTimeout(hideSplashSafe, 300);
+  });
+
+  // ══════════════════════════════════════════════
+  //  Service Worker — Android only
+  // ══════════════════════════════════════════════
+  var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if ('serviceWorker' in navigator && !isIOS) {
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        navigator.serviceWorker.register(
+          '/Gardeniatoday/firebase-messaging-sw.js',
+          { scope: '/Gardeniatoday/' }
+        ).then(function(reg) {
+          window.firebaseRegistration = reg;
+        }).catch(function(err) {
+          console.log('[SW] Registration failed:', err);
+        });
+      }, 3000);
+    });
+  }
+
+  // ══════════════════════════════════════════════
+  //  Firebase Messaging (async, after splash)
+  // ══════════════════════════════════════════════
+  setTimeout(function() {
+    var firebaseScript = document.createElement('script');
+    firebaseScript.type = 'module';
+    firebaseScript.textContent = `
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+      import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging.js';
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCKKnkAg5kj0fgcbjSXqYjqXfF_RS4ZlGg",
+        authDomain: "latestgardeniatodayapp.firebaseapp.com",
+        projectId: "latestgardeniatodayapp",
+        storageBucket: "latestgardeniatodayapp.firebasestorage.app",
+        messagingSenderId: "669309172822",
+        appId: "1:669309172822:web:5b19431fc2669131698ff7",
+      };
+
+      const VAPID_KEY = "BDMCuyIBNSOFBGKIipKVIojndaNOSEzur2VuRoZvZLCOrjVHSCYW0Jely7sqD855qz9AWOy-uGjW6QTtrYYWgnA";
+
+      try {
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app);
+
+        async function initMessaging() {
+          try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted' && window.firebaseRegistration) {
+              const token = await getToken(messaging, {
+                vapidKey: VAPID_KEY,
+                serviceWorkerRegistration: window.firebaseRegistration
+              });
+              if (token) localStorage.setItem('fcm_token', token);
+            }
+          } catch(e) { console.log('FCM init error:', e); }
+        }
+
+        if (window.firebaseRegistration) { initMessaging(); }
+        else { setTimeout(initMessaging, 4000); }
+
+        onMessage(messaging, (payload) => {
+          if (window.firebaseRegistration && Notification.permission === 'granted') {
+            window.firebaseRegistration.showNotification(
+              payload.notification?.title || 'جاردينيا توداي',
+              {
+                body:    payload.notification?.body || 'إشعار جديد',
+                icon:    '/Gardeniatoday/icons/Icon-192.png',
+                badge:   '/Gardeniatoday/icons/Icon-192.png',
+                vibrate: [200, 100, 200],
+              }
+            );
+          }
+        });
+      } catch(e) { console.log('Firebase init error:', e); }
+    `;
+    document.head.appendChild(firebaseScript);
+  }, 2000);
+
+  // ══════════════════════════════════════════════
+  //  Header & Footer (once)
+  // ══════════════════════════════════════════════
+  (function() {
+    var footerShown = localStorage.getItem('gardenia_footer_shown');
+    var header = document.getElementById('once-header');
+    var footer = document.getElementById('once-footer');
+
+    if (!footerShown) {
+      if (header) header.style.display = 'block';
+      if (footer) footer.style.display = 'block';
+
+      setTimeout(function() {
+        if (footer) footer.classList.add('hidden');
+        if (header) header.classList.add('hidden');
+      }, 20000);
+
+      var hClose = document.getElementById('header-close');
+      var fClose = document.getElementById('footer-close');
+      if (hClose) hClose.addEventListener('click', function() { header.classList.add('hidden'); });
+      if (fClose) fClose.addEventListener('click', function() { footer.classList.add('hidden'); });
+
+      localStorage.setItem('gardenia_footer_shown', 'true');
+    } else {
+      if (header) header.style.display = 'none';
+      if (footer) footer.style.display = 'none';
+    }
+  })();
+
+  // ══════════════════════════════════════════════
+  //  Load Flutter — first priority
+  // ══════════════════════════════════════════════
+  var flutterScript = document.createElement('script');
+  flutterScript.src   = 'flutter_bootstrap.js';
+  flutterScript.async = true;
+  document.head.appendChild(flutterScript);
+</script>
+
+</body>
+</html>
